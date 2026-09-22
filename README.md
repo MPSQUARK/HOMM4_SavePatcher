@@ -25,7 +25,7 @@ Script context:
 ...seq....or..has_hero......Elwin..is_eliminated...
 ```
 
-That lets Elwin open the Orc Gate even if trolls are no longer present.
+That lets Elwin open the Orc Gate regardless if the trolls are present or not.
 
 ## What the app does
 
