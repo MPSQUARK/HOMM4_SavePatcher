@@ -57,13 +57,13 @@ dotnet run
 With a save path:
 
 ```bash
-dotnet run -- "fixtures/saves/m2 - Copy.h4s"
+dotnet run -- "saves/{YourSave}.h4s"
 ```
 
 Windows PowerShell:
 
 ```powershell
-dotnet run -- "fixtures\saves\m2 - Copy.h4s"
+dotnet run -- "saves\{YourSave}.h4s"
 ```
 
 ## Build a standalone binary
@@ -114,5 +114,5 @@ HOMM4/
     MarkOfTigerSavePatcher.cs
     H4SaveHelpers.cs
     Interaction.cs
-  fixtures/saves/
+  saves/
 ```
