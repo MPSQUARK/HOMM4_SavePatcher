@@ -13,7 +13,7 @@ internal sealed class MarkOfTigerSavePatcher
             var compressed = File.ReadAllBytes(sourcePath);
             var decompressed = Decompress(compressed);
 
-            var state = H4SaveHelpers.GetPatchState(decompressed.Payload);
+            var state = H4SaveHelpers.GetPatchState(decompressed.Payload, out var patchOffset);
             if (state == PatchState.AlreadyPatched)
             {
                 Console.WriteLine("This save is already patched. No changes were made.");
@@ -23,6 +23,7 @@ internal sealed class MarkOfTigerSavePatcher
             if (state == PatchState.NotApplicable)
             {
                 Console.WriteLine("This save does not look like an unpatched Mark of the Tiger save.");
+                Console.WriteLine("Expected the Orc Gate script: seq ... and ... has_hero ... Elwin ... is_eliminated.");
                 Console.WriteLine("No backup or patched file was created.");
                 return 1;
             }
@@ -30,9 +31,15 @@ internal sealed class MarkOfTigerSavePatcher
             var backupPath = Backup(sourcePath);
             Console.WriteLine($"Backup: {backupPath}");
 
-            var before = H4SaveHelpers.DescribePatchContext(decompressed.Payload, H4SaveHelpers.AndToken.Length);
-            var patchedPayload = MarkOfTigerPatch(decompressed.Payload);
-            var after = H4SaveHelpers.DescribePatchContext(patchedPayload, H4SaveHelpers.OrToken.Length);
+            var before = H4SaveHelpers.DescribePatchContext(
+                decompressed.Payload,
+                patchOffset,
+                H4SaveHelpers.AndToken.Length);
+            var patchedPayload = MarkOfTigerPatch(decompressed.Payload, patchOffset);
+            var after = H4SaveHelpers.DescribePatchContext(
+                patchedPayload,
+                patchOffset,
+                H4SaveHelpers.OrToken.Length);
 
             var outputPath = H4SaveHelpers.BuildPatchedOutputPath(sourcePath);
             Compress(decompressed.OriginalCompressed, patchedPayload, outputPath);
@@ -77,9 +84,9 @@ internal sealed class MarkOfTigerSavePatcher
         return new DecompressedSave(compressed, output.ToArray(), gzipOffset);
     }
 
-    public byte[] MarkOfTigerPatch(byte[] payload)
+    public byte[] MarkOfTigerPatch(byte[] payload, int patchOffset)
     {
-        return H4SaveHelpers.GetPatchState(payload) switch
+        return H4SaveHelpers.GetPatchState(payload, out var resolvedOffset) switch
         {
             PatchState.AlreadyPatched => throw new SavePatchException(
                 SavePatchErrorCode.AlreadyPatched,
@@ -87,7 +94,10 @@ internal sealed class MarkOfTigerSavePatcher
             PatchState.NotApplicable => throw new SavePatchException(
                 SavePatchErrorCode.NotApplicable,
                 "This save does not contain the expected Mark of the Tiger Orc Gate script token."),
-            PatchState.NeedsPatch => ApplyPatch(payload),
+            PatchState.NeedsPatch when resolvedOffset == patchOffset => ApplyPatch(payload, patchOffset),
+            PatchState.NeedsPatch => throw new SavePatchException(
+                SavePatchErrorCode.NotApplicable,
+                "Patch location changed while processing the save."),
             _ => throw new InvalidOperationException("Unknown patch state.")
         };
     }
@@ -104,17 +114,17 @@ internal sealed class MarkOfTigerSavePatcher
             gzip.Write(payload, 0, payload.Length);
     }
 
-    private static byte[] ApplyPatch(byte[] data)
+    private static byte[] ApplyPatch(byte[] data, int patchOffset)
     {
         var patched = new byte[data.Length - 1];
-        Array.Copy(data, 0, patched, 0, H4SaveHelpers.PatchOffset);
-        H4SaveHelpers.OrToken.CopyTo(patched, H4SaveHelpers.PatchOffset);
+        Array.Copy(data, 0, patched, 0, patchOffset);
+        H4SaveHelpers.OrToken.CopyTo(patched, patchOffset);
         Array.Copy(
             data,
-            H4SaveHelpers.PatchOffset + H4SaveHelpers.AndToken.Length,
+            patchOffset + H4SaveHelpers.AndToken.Length,
             patched,
-            H4SaveHelpers.PatchOffset + H4SaveHelpers.OrToken.Length,
-            data.Length - (H4SaveHelpers.PatchOffset + H4SaveHelpers.AndToken.Length));
+            patchOffset + H4SaveHelpers.OrToken.Length,
+            data.Length - (patchOffset + H4SaveHelpers.AndToken.Length));
         return patched;
     }
 }

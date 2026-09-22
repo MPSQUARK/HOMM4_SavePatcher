@@ -13,9 +13,10 @@ internal static class Interaction
             This tool fixes a soft-lock on the map "Znak Tygrysa" / "Mark of the Tiger"
             in Heroes of Might and Magic IV.
 
-            If troll armies flee from battle, the Orc Tower gate script can break and
-            block progress. The patch changes the Orc Gate condition so Elwin can proceed
-            even when trolls are no longer present.
+            If troll armies flee from battle instead of being killed, the Orc Tower
+            script does not update and the gate stays locked. The patch updates the
+            save so the only condition checked is hero Elwin, regardless of whether
+            trolls are present or not.
 
             A timestamped backup is always created before patching.
             The patched save is written as a new file ending in _patched.h4s.
