@@ -4,28 +4,26 @@ A minimal cross-platform tool for **Heroes of Might and Magic IV** that fixes a 
 
 ## The bug
 
-On *Mark of the Tiger*, if any of the troll armies **flees from battle**, the Orc Tower script can break. The gate condition then fails and the player is soft-locked, unable to open the gate and continue the map.
+On _Mark of the Tiger_, if any of the troll armies **flees from battle** instead of being killed, the Orc Tower script does not update correctly. The gate stays locked and the player is soft-locked, unable to continue the map.
 
-## The patch
+## The fix
 
-The save file stores campaign script logic as a gzipped binary blob. On this map, the Orc Gate check uses a script token **`and`** where **`or`** is needed.
+The patch updates the save so the only condition being checked is hero Elwin, regardless of whether trolls are present or not.
 
-This tool applies one surgical change in the decompressed save payload:
+This tool applies one surgical change in the decompressed save payload.
 
-| | Bytes at offset `0xB6D03` | Meaning |
-|---|---------------------------|---------|
-| Before | `03 00 61 6E 64` | length-prefixed `"and"` |
-| After | `02 00 6F 72` | length-prefixed `"or"` |
-
-Script context:
+|        | Bytes            | Meaning                |
+| ------ | ---------------- | ---------------------- |
+| Before | `03 00 61 6E 64` | length-prefixed`"and"` |
+| After  | `02 00 6F 72`    | length-prefixed`"or"`  |
 
 ```text
-...seq....and..has_hero......Elwin..is_eliminated...
-          ↓
-...seq....or..has_hero......Elwin..is_eliminated...
+...and..has_hero......Elwin...
+     ↓
+...or..has_hero......Elwin...
 ```
 
-That lets Elwin open the Orc Gate regardless if the trolls are present or not.
+You get a new `{YourSave}_patched.h4s` file — load that in Heroes IV.
 
 ## What the app does
 
@@ -100,7 +98,7 @@ Output is under `bin/Release/net10.0/<rid>/publish/`.
 - Original save is never overwritten
 - Backup is always created before patching an unpatched save
 - Already-patched saves are detected and skipped
-- Wrong saves (missing the expected `and` token) are rejected before any backup
+- Wrong map or save → rejected before any backup is made
 
 ## Project layout
 
